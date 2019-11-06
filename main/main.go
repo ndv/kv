@@ -100,6 +100,7 @@ func httpError(err error, w http.ResponseWriter) bool {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(400)
 		fmt.Fprintln(w, err.Error())
+		fmt.Println("Error: ", err.Error())
 		return true
 	}
 }
