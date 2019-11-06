@@ -120,19 +120,6 @@ func handlePut (w http.ResponseWriter, req *http.Request) {
 
 	body := bufio.NewReader(req.Body)
 
-	s := make([]byte, 32)
-	_, err := io.ReadFull(body, s)
-	if httpError(err, w) {
-		return
-	}
-	r := make([]byte, 32)
-	_, err = io.ReadFull(body, r)
-	if httpError(err, w) {
-		return
-	}
-
-	fmt.Println("s,r = ", s, r)
-
 	ctx, err := readRequestHeader(body)
 	if httpError(err, w) {
 		return
