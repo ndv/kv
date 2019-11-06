@@ -41,6 +41,7 @@ func main() {
 
 	http.HandleFunc("/put", handlePut)
 	http.HandleFunc("/getAll", handleGetAll)
+	http.HandleFunc("/clear", handleClear)
 
 	// Determine port for HTTP service.
 	// Start HTTP main.
@@ -196,4 +197,20 @@ func handleGetAll (w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintln(w, "\"}")
 	}
 	fmt.Fprintln(w, "]")
+}
+
+func handleClear (w http.ResponseWriter, req *http.Request) {
+	log.Printf("req=%s", req.URL)
+
+	body := bufio.NewReader(req.Body)
+
+	ctx, err := readRequestHeader(body)
+	if httpError(err, w) {
+		return
+	}
+
+	err = db.Clear(ctx.pubkey)
+	if httpError(err, w) {
+		return
+	}
 }

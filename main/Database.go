@@ -62,3 +62,23 @@ func (db *Database) GetAll(pubkey *ecdsa.PublicKey) ([]Pair, error) {
 	}
 	return result, nil
 }
+
+func (db *Database) Clear(pubkey *ecdsa.PublicKey) error {
+	prefix := bitcurve.CompressPoint(pubkey)
+	iterator := db.db.NewIterator(util.BytesPrefix(prefix), nil)
+	defer iterator.Release()
+	if !iterator.First() {
+		return nil
+	}
+	err := db.db.Delete(iterator.Key(), nil)
+	if err != nil {
+		return err
+	}
+	for iterator.Next() {
+		err = db.db.Delete(iterator.Key(), nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
