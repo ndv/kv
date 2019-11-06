@@ -130,6 +130,9 @@ func handlePut (w http.ResponseWriter, req *http.Request) {
 	if httpError(err, w) {
 		return
 	}
+
+	fmt.Println("s,r = ", s, r)
+
 	ctx, err := readRequestHeader(body)
 	if httpError(err, w) {
 		return
@@ -143,6 +146,9 @@ func handlePut (w http.ResponseWriter, req *http.Request) {
 	if httpError(err, w) {
 		return
 	}
+
+	fmt.Println("key = ", key)
+
 	vsize, err := readUint16(body)
 	if httpError(err, w) {
 		return
@@ -152,6 +158,8 @@ func handlePut (w http.ResponseWriter, req *http.Request) {
 	if httpError(err, w) {
 		return
 	}
+
+	fmt.Println("value = ", value)
 
 	message := append(writeUint16(ksize), key...)
 	message = append(message, writeUint16(vsize)...)
