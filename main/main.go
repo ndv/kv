@@ -82,11 +82,14 @@ func readRequestHeader(body *bufio.Reader) (*CryptoContext, error) {
 		_, err = io.ReadFull(body, sbytes)
 		if err == nil {
 			pubkeyBytes := make([]byte, 33)
-			pubkey := bitcurve.S256().UncompressPoint(pubkeyBytes)
-			if pubkey != nil {
-				return &CryptoContext{s: new(big.Int).SetBytes(sbytes), r: new(big.Int).SetBytes(rbytes), pubkey: pubkey}, nil
-			} else {
-				err = &WrongPubkeyError{}
+			_, err = io.ReadFull(body, pubkeyBytes)
+			if err == nil {
+				pubkey := bitcurve.S256().UncompressPoint(pubkeyBytes)
+				if pubkey != nil {
+					return &CryptoContext{s: new(big.Int).SetBytes(sbytes), r: new(big.Int).SetBytes(rbytes), pubkey: pubkey}, nil
+				} else {
+					err = &WrongPubkeyError{}
+				}
 			}
 		}
 	}
