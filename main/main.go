@@ -152,6 +152,8 @@ func handlePut (w http.ResponseWriter, req *http.Request) {
 	message = append(message, writeUint16(vsize)...)
 	message = append(message, value...)
 
+	fmt.Println("message = ", message)
+
 	if !ctx.checkSignature(message) {
 		w.WriteHeader(403)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
