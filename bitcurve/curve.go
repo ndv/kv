@@ -88,7 +88,7 @@ func (curve *BitCurve) sqrt(i *big.Int) (odd, even *big.Int) {
 
 func (curve *BitCurve) UncompressPoint(bytes33 []byte) *ecdsa.PublicKey {
 	x := new(big.Int).SetBytes(bytes33[1:])
-	even, odd := curve.sqrt(x)
+	odd, even := curve.sqrt(x)
 	if bytes33[0] == 2 {
 		// even y
 		return &ecdsa.PublicKey{Curve: curve, X: x, Y: even}

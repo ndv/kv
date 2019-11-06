@@ -53,12 +53,9 @@ func (db *Database) GetAll(pubkey *ecdsa.PublicKey) ([]Pair, error) {
 	prefix := bitcurve.CompressPoint(pubkey)
 	iterator := db.db.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iterator.Release()
-	if !iterator.First() {
-		return make([]Pair, 0), nil
-	}
-	result := []Pair {Pair{iterator.Key(), iterator.Value()}}
+	var result = make([]Pair, 0)
 	for iterator.Next() {
-		result = append(result, Pair{iterator.Key(), iterator.Value()})
+		result = append(result, Pair{iterator.Key()[33:], iterator.Value()})
 	}
 	return result, nil
 }
