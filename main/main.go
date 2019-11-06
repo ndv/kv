@@ -5,7 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/ndv/kv/bitcurve"
@@ -178,5 +178,18 @@ func handleGetAll (w http.ResponseWriter, req *http.Request) {
 
 	w.WriteHeader(200)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(list)
+
+	fmt.Fprintln(w, "[")
+	for i := 0; i < len(list); i++ {
+		pair := list[i]
+		if i != 0 {
+			fmt.Fprintln(w, ",\n")
+		}
+		fmt.Fprintln(w, "{\"key\": \"")
+		hex.NewEncoder(w).Write(pair.key)
+		fmt.Fprintln(w, "\", \"value\": \"")
+		hex.NewEncoder(w).Write(pair.value)
+		fmt.Fprintln(w, "\"}")
+	}
+	fmt.Fprintln(w, "]")
 }
