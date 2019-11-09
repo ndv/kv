@@ -186,22 +186,28 @@ func handleGetAll (w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.WriteHeader(200)
-	w.Header().Set("Content-Type", "application/json")
+	if !ctx.checkSignature([]byte("getAll")) {
+		w.WriteHeader(403)
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprintln(w, "Wrong signature")
+	} else {
+		w.WriteHeader(200)
+		w.Header().Set("Content-Type", "application/json")
 
-	fmt.Fprintln(w, "[")
-	for i := 0; i < len(list); i++ {
-		pair := list[i]
-		if i != 0 {
-			fmt.Fprintln(w, ",\n")
+		fmt.Fprintln(w, "[")
+		for i := 0; i < len(list); i++ {
+			pair := list[i]
+			if i != 0 {
+				fmt.Fprintln(w, ",\n")
+			}
+			fmt.Fprint(w, "{\"key\": \"")
+			hex.NewEncoder(w).Write(pair.key)
+			fmt.Fprint(w, "\", \"value\": \"")
+			hex.NewEncoder(w).Write(pair.value)
+			fmt.Fprint(w, "\"}")
 		}
-		fmt.Fprint(w, "{\"key\": \"")
-		hex.NewEncoder(w).Write(pair.key)
-		fmt.Fprint(w, "\", \"value\": \"")
-		hex.NewEncoder(w).Write(pair.value)
-		fmt.Fprint(w, "\"}")
+		fmt.Fprintln(w, "]")
 	}
-	fmt.Fprintln(w, "]")
 }
 
 func handleClear (w http.ResponseWriter, req *http.Request) {
@@ -214,8 +220,15 @@ func handleClear (w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = db.Clear(ctx.pubkey)
-	if httpError(err, w) {
-		return
+	if !ctx.checkSignature([]byte("getAll")) {
+		w.WriteHeader(403)
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprintln(w, "Wrong signature")
+	} else {
+		err = db.Clear(ctx.pubkey)
+		if httpError(err, w) {
+			return
+		}
+		w.WriteHeader(200)
 	}
 }
