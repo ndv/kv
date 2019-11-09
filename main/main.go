@@ -220,7 +220,7 @@ func handleClear (w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if !ctx.checkSignature([]byte("getAll")) {
+	if !ctx.checkSignature([]byte("clear")) {
 		w.WriteHeader(403)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		fmt.Fprintln(w, "Wrong signature")
