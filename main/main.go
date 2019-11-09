@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -11,7 +10,6 @@ import (
 	"github.com/ndv/kv/bitcurve"
 	"io"
 	"log"
-	"math/big"
 	"net/http"
 	"os"
 )
@@ -65,8 +63,8 @@ func writeUint16(i uint16) []byte {
 }
 
 type CryptoContext struct {
-	s, r   *big.Int
-	pubkey *ecdsa.PublicKey
+	pubkey bitcurve.Point
+	sig    bitcurve.Sig
 }
 
 type WrongPubkeyError struct {}
@@ -85,10 +83,13 @@ func readRequestHeader(body *bufio.Reader) (*CryptoContext, error) {
 			pubkeyBytes := make([]byte, 33)
 			_, err = io.ReadFull(body, pubkeyBytes)
 			if err == nil {
-				pubkey := bitcurve.S256().UncompressPoint(pubkeyBytes)
-				fmt.Println("Uncompressed point ", pubkey)
+				pubkey := bitcurve.UnmarshallCompressedPoint(pubkeyBytes)
 				if pubkey != nil {
-					return &CryptoContext{s: new(big.Int).SetBytes(sbytes), r: new(big.Int).SetBytes(rbytes), pubkey: pubkey}, nil
+					sig := bitcurve.NewSig()
+					r := bitcurve.Bin2Bn(rbytes)
+					s := bitcurve.Bin2Bn(sbytes)
+					bitcurve.SigSet(sig, r, s)
+					return &CryptoContext{pubkey: *pubkey, sig: sig}, nil
 				} else {
 					err = &WrongPubkeyError{}
 				}
@@ -97,6 +98,12 @@ func readRequestHeader(body *bufio.Reader) (*CryptoContext, error) {
 	}
 	return nil, err
 }
+
+func (ctx *CryptoContext) free() {
+	bitcurve.FreePoint(ctx.pubkey)
+	bitcurve.FreeSig(ctx.sig)
+}
+
 
 func httpError(err error, w http.ResponseWriter) bool {
 	if err == nil {
@@ -112,7 +119,7 @@ func httpError(err error, w http.ResponseWriter) bool {
 
 func (ctx *CryptoContext) checkSignature(message []byte) bool {
 	hash := sha256.Sum256(message)
-	return ecdsa.Verify(ctx.pubkey, hash[:], ctx.r, ctx.s)
+	return bitcurve.VerifySig(hash[:], ctx.sig, ctx.pubkey)
 }
 
 func handlePut (w http.ResponseWriter, req *http.Request) {

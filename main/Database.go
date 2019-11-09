@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"github.com/ndv/kv/bitcurve"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -40,8 +39,8 @@ func (db *Database) Close() error {
 	return db.db.Close()
 }
 
-func (db *Database) Put(pubkey *ecdsa.PublicKey, key []byte, value []byte) error {
-	key = append(bitcurve.CompressPoint(pubkey), key...)
+func (db *Database) Put(pubkey bitcurve.Point, key []byte, value []byte) error {
+	key = append(bitcurve.MarshallCompressedPoint(pubkey), key...)
 	return db.db.Put(key, value, nil)
 }
 
@@ -49,8 +48,8 @@ type Pair struct {
 	key, value []byte
 }
 
-func (db *Database) GetAll(pubkey *ecdsa.PublicKey) ([]Pair, error) {
-	prefix := bitcurve.CompressPoint(pubkey)
+func (db *Database) GetAll(pubkey bitcurve.Point) ([]Pair, error) {
+	prefix := bitcurve.MarshallCompressedPoint(pubkey)
 	iterator := db.db.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iterator.Release()
 	var result = make([]Pair, 0)
@@ -60,8 +59,8 @@ func (db *Database) GetAll(pubkey *ecdsa.PublicKey) ([]Pair, error) {
 	return result, nil
 }
 
-func (db *Database) Clear(pubkey *ecdsa.PublicKey) error {
-	prefix := bitcurve.CompressPoint(pubkey)
+func (db *Database) Clear(pubkey bitcurve.Point) error {
+	prefix := bitcurve.MarshallCompressedPoint(pubkey)
 	iterator := db.db.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iterator.Release()
 	if !iterator.First() {
