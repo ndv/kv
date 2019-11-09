@@ -195,11 +195,11 @@ func handleGetAll (w http.ResponseWriter, req *http.Request) {
 		if i != 0 {
 			fmt.Fprintln(w, ",\n")
 		}
-		fmt.Fprintln(w, "{\"key\": \"")
+		fmt.Fprint(w, "{\"key\": \"")
 		hex.NewEncoder(w).Write(pair.key)
-		fmt.Fprintln(w, "\", \"value\": \"")
+		fmt.Fprint(w, "\", \"value\": \"")
 		hex.NewEncoder(w).Write(pair.value)
-		fmt.Fprintln(w, "\"}")
+		fmt.Fprint(w, "\"}")
 	}
 	fmt.Fprintln(w, "]")
 }
