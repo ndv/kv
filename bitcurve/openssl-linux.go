@@ -15,6 +15,14 @@ import (
 type Bignum = *C.BIGNUM
 type Group = *C.EC_GROUP
 type Ctx = *C.BN_CTX
+type Point = *C.EC_POINT
+type Sig = *C.ECDSA_SIG
+type Key = *C.EC_KEY
+
+var (
+	PointNil = Point(nil)
+	BnNil = Bignum(nil)
+)
 
 func Bn2hex(bn Bignum) string {
 	ptr := C.BN_bn2hex(bn)
@@ -44,7 +52,7 @@ func BnSetWord(bn Bignum, w uint64) {
 }
 
 func Hex2Bn(s string) Bignum {
-	b := Bignum(0)
+	b := Bignum(nil)
 	c := C.CString(s)
 	C.BN_hex2bn(&b, c)
 	C.free(unsafe.Pointer(c))
@@ -52,7 +60,7 @@ func Hex2Bn(s string) Bignum {
 }
 
 func Bin2Bn(bytes []byte) Bignum {
-	return C.BN_bin2bn((*C.uchar)(unsafe.Pointer(&bytes[0])), len(bytes), 0)
+	return C.BN_bin2bn((*C.uchar)(unsafe.Pointer(&bytes[0])), C.int(len(bytes)), Bignum(nil))
 }
 
 func FreeBn(bn Bignum) {
@@ -95,7 +103,7 @@ func Point2binCompressed(group Group, point Point, ctx Ctx) []byte {
 // the result should later be released with FreePoint
 func Bin2point(group Group, bytes []byte, ctx Ctx) *Point {
 	point := NewPoint(group)
-	ret := C.EC_POINT_oct2point(group, point, (*C.uchar)(unsafe.Pointer(&bytes[0])), len(bytes), ctx)
+	ret := C.EC_POINT_oct2point(group, point, (*C.uchar)(unsafe.Pointer(&bytes[0])), C.ulong(len(bytes)), ctx)
 	if ret == 0 {
 		return nil
 	}
@@ -113,8 +121,8 @@ func SigSet(sig Sig, r Bignum, s Bignum) {
 }
 
 func SigGet(sig Sig) (r,s Bignum) {
-	r = Bignum(0)
-	s = Bignum(0)
+	r = Bignum(nil)
+	s = Bignum(nil)
 	C.ECDSA_SIG_get0(sig, &r, &s)
 	return r, s
 }
@@ -124,7 +132,7 @@ func FreeSig(sig Sig) {
 }
 
 func Verify(digest []byte, sig Sig, key Key) bool {
-	return C.ECDSA_do_verify((*C.uchar)(unsafe.Pointer(&digest[0])), len(digest), sig, key) == 1
+	return C.ECDSA_do_verify((*C.uchar)(unsafe.Pointer(&digest[0])), C.int(len(digest)), sig, key) == 1
 }
 
 func NewKey() Key {
@@ -132,7 +140,7 @@ func NewKey() Key {
 }
 
 func FreeKey(key Key) {
-	return C.EC_KEY_free(key)
+	C.EC_KEY_free(key)
 }
 
 func KeySetPublic(key Key, pubkey Point) {
