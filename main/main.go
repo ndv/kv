@@ -192,7 +192,7 @@ func handleGetAll(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if !ctx.checkSignature([]byte("getAll"), w, req) {
+	if ctx.checkSignature([]byte("getAll"), w, req) {
 		log.Printf("%s: %s read %d keys", req.URL, hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)), len(list))
 		w.WriteHeader(200)
 		w.Header().Set("Content-Type", "application/json")
