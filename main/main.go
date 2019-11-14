@@ -26,7 +26,7 @@ func main() {
 	if defaultPath == "" {
 		defaultPath = "."
 	}
-	databasePath := flag.String("database", defaultPath + "/.kv/database", "Database path")
+	databasePath := flag.String("database", defaultPath+"/.kv/database", "Database path")
 	flag.Parse()
 
 	var err error
@@ -67,7 +67,7 @@ type CryptoContext struct {
 	sig    bitcurve.Sig
 }
 
-type WrongPubkeyError struct {}
+type WrongPubkeyError struct{}
 
 func (e *WrongPubkeyError) Error() string {
 	return "Wrong compressed public key"
@@ -104,93 +104,96 @@ func (ctx *CryptoContext) free() {
 	bitcurve.FreeSig(ctx.sig)
 }
 
-
-func httpError(err error, w http.ResponseWriter) bool {
+func httpError(err error, w http.ResponseWriter, req *http.Request, msg string) bool {
 	if err == nil {
 		return false
 	} else {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(400)
 		fmt.Fprintln(w, err.Error())
-		fmt.Println("Error: ", err.Error())
+
+		log.Printf("%s: error %s %s", req.URL, err.Error(), msg)
+
 		return true
 	}
 }
 
-func (ctx *CryptoContext) checkSignature(message []byte) bool {
+func (ctx *CryptoContext) checkSignature(message []byte, w http.ResponseWriter, req *http.Request) bool {
 	hash := sha256.Sum256(message)
-	return bitcurve.VerifySig(hash[:], ctx.sig, ctx.pubkey)
+	if bitcurve.VerifySig(hash[:], ctx.sig, ctx.pubkey) {
+		return true
+	} else {
+
+		log.Printf("%s: wrong signature for message of length %d and pubkey %s", req.URL, len(message), hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)))
+
+		w.WriteHeader(403)
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprintln(w, "Wrong signature")
+		return false
+	}
 }
 
-func handlePut (w http.ResponseWriter, req *http.Request) {
-	log.Printf("req=%s", req.URL)
+func handlePut(w http.ResponseWriter, req *http.Request) {
 
 	body := bufio.NewReader(req.Body)
 
 	ctx, err := readRequestHeader(body)
-	if httpError(err, w) {
+	if httpError(err, w, req, "reading the header") {
 		return
 	}
+
 	ksize, err := readUint16(body)
-	if httpError(err, w) {
+	if httpError(err, w, req, "reading key size") {
 		return
 	}
+
 	key := make([]byte, ksize)
 	_, err = io.ReadFull(body, key)
-	if httpError(err, w) {
+	if httpError(err, w, req, "reading key") {
 		return
 	}
 
-	fmt.Println("key = ", key)
+	log.Printf("%s: %s put %s", req.URL, hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)), string(key))
 
 	vsize, err := readUint16(body)
-	if httpError(err, w) {
+	if httpError(err, w, req, "reading value size") {
 		return
 	}
 	value := make([]byte, vsize)
 	_, err = io.ReadFull(body, value)
-	if httpError(err, w) {
+	if httpError(err, w, req, "reading value") {
 		return
 	}
-
-	fmt.Println("value = ", value)
 
 	message := append(writeUint16(ksize), key...)
 	message = append(message, writeUint16(vsize)...)
 	message = append(message, value...)
 
-	fmt.Println("message = ", message)
-
-	if !ctx.checkSignature(message) {
-		w.WriteHeader(403)
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		fmt.Fprintln(w, "Wrong signature")
-	} else {
+	if ctx.checkSignature(message, w, req) {
 		db.Put(ctx.pubkey, key, value)
 		w.WriteHeader(200)
 	}
 }
 
-func handleGetAll (w http.ResponseWriter, req *http.Request) {
-	log.Printf("req=%s", req.URL)
-
+func handleGetAll(w http.ResponseWriter, req *http.Request) {
 	body := bufio.NewReader(req.Body)
 
 	ctx, err := readRequestHeader(body)
-	if httpError(err, w) {
+	if httpError(err, w, req, "reading the header") {
+		log.Printf("%s: error %s", req.URL, err.Error())
 		return
 	}
+
+	log.Printf("%s: %s", req.URL, hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)))
 
 	list, err := db.GetAll(ctx.pubkey)
-	if httpError(err, w) {
+	if httpError(err, w, req, "querying the database") {
+		log.Printf("%s: error %s requesting the database", req.URL, err.Error())
 		return
 	}
 
-	if !ctx.checkSignature([]byte("getAll")) {
-		w.WriteHeader(403)
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		fmt.Fprintln(w, "Wrong signature")
-	} else {
+	if !ctx.checkSignature([]byte("getAll"), w, req) {
+		log.Printf("%s: %s read %d keys", req.URL, hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)), len(list))
 		w.WriteHeader(200)
 		w.Header().Set("Content-Type", "application/json")
 
@@ -210,23 +213,19 @@ func handleGetAll (w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func handleClear (w http.ResponseWriter, req *http.Request) {
-	log.Printf("req=%s", req.URL)
-
+func handleClear(w http.ResponseWriter, req *http.Request) {
 	body := bufio.NewReader(req.Body)
 
 	ctx, err := readRequestHeader(body)
-	if httpError(err, w) {
+	if httpError(err, w, req, "reading the header") {
+		log.Printf("%s: error %s", req.URL, err.Error())
 		return
 	}
 
-	if !ctx.checkSignature([]byte("clear")) {
-		w.WriteHeader(403)
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		fmt.Fprintln(w, "Wrong signature")
-	} else {
+	if ctx.checkSignature([]byte("clear"), w, req) {
+		log.Printf("%s: %s", req.URL, hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)))
 		err = db.Clear(ctx.pubkey)
-		if httpError(err, w) {
+		if httpError(err, w, req, "error clearing the database") {
 			return
 		}
 		w.WriteHeader(200)

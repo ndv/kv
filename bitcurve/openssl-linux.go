@@ -21,12 +21,12 @@ type Key = *C.EC_KEY
 
 var (
 	PointNil = Point(nil)
-	BnNil = Bignum(nil)
+	BnNil    = Bignum(nil)
 )
 
 func Bn2hex(bn Bignum) string {
 	ptr := C.BN_bn2hex(bn)
-	defer C.CRYPTO_free(unsafe.Pointer(ptr), C.CString("openssl-lonux.go"), 17)
+	defer C.CRYPTO_free(unsafe.Pointer(ptr), C.CString("openssl-linux.go"), 29)
 	return C.GoString(ptr)
 }
 
@@ -120,7 +120,7 @@ func SigSet(sig Sig, r Bignum, s Bignum) {
 	C.ECDSA_SIG_set0(sig, r, s)
 }
 
-func SigGet(sig Sig) (r,s Bignum) {
+func SigGet(sig Sig) (r, s Bignum) {
 	r = Bignum(nil)
 	s = Bignum(nil)
 	C.ECDSA_SIG_get0(sig, &r, &s)
