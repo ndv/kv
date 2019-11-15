@@ -124,7 +124,7 @@ func (ctx *CryptoContext) checkSignature(message []byte, w http.ResponseWriter, 
 		return true
 	} else {
 
-		log.Printf("%s: wrong signature for message of length %d and pubkey %s", req.URL, len(message), hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)))
+		log.Printf("%s: wrong signature for message of length %d and pubkey %s", req.URL, len(message), hex.EncodeToString(bitcurve.MarshallCompressedPoint(ctx.pubkey)))
 
 		w.WriteHeader(403)
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -153,7 +153,7 @@ func handlePut(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Printf("%s: %s put %s", req.URL, hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)), string(key))
+	log.Printf("%s: %s put %s", req.URL, hex.EncodeToString(bitcurve.MarshallCompressedPoint(ctx.pubkey)), string(key))
 
 	vsize, err := readUint16(body)
 	if httpError(err, w, req, "reading value size") {
@@ -184,7 +184,7 @@ func handleGetAll(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Printf("%s: %s", req.URL, hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)))
+	log.Printf("%s: %s", req.URL, hex.EncodeToString(bitcurve.MarshallCompressedPoint(ctx.pubkey)))
 
 	list, err := db.GetAll(ctx.pubkey)
 	if httpError(err, w, req, "querying the database") {
@@ -193,7 +193,7 @@ func handleGetAll(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if ctx.checkSignature([]byte("getAll"), w, req) {
-		log.Printf("%s: %s read %d keys", req.URL, hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)), len(list))
+		log.Printf("%s: %s read %d keys", req.URL, hex.EncodeToString(bitcurve.MarshallCompressedPoint(ctx.pubkey)), len(list))
 		w.WriteHeader(200)
 		w.Header().Set("Content-Type", "application/json")
 
@@ -223,7 +223,7 @@ func handleClear(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if ctx.checkSignature([]byte("clear"), w, req) {
-		log.Printf("%s: %s", req.URL, hex.Dump(bitcurve.MarshallCompressedPoint(ctx.pubkey)))
+		log.Printf("%s: %s", req.URL, hex.EncodeToString(bitcurve.MarshallCompressedPoint(ctx.pubkey)))
 		err = db.Clear(ctx.pubkey)
 		if httpError(err, w, req, "error clearing the database") {
 			return
