@@ -48,13 +48,19 @@ type Pair struct {
 	key, value []byte
 }
 
+func copyBytes(bytes []byte) []byte {
+	new := make([]byte, len(bytes))
+	copy(new, bytes)
+	return new
+}
+
 func (db *Database) GetAll(pubkey bitcurve.Point) ([]Pair, error) {
 	prefix := bitcurve.MarshallCompressedPoint(pubkey)
 	iterator := db.db.NewIterator(util.BytesPrefix(prefix), nil)
 	defer iterator.Release()
 	var result = make([]Pair, 0)
 	for iterator.Next() {
-		result = append(result, Pair{iterator.Key()[33:], iterator.Value()})
+		result = append(result, Pair{copyBytes(iterator.Key()[33:]), copyBytes(iterator.Value())})
 	}
 	return result, nil
 }
